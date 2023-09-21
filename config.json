@@ -1,0 +1,19 @@
+{
+	"dni": "",
+	"clave": "",
+	"comedores": [{
+			"nombre": "Comedor Universitario FCEIA",
+			"horaInicio": "12:00",
+			"dias": ["lu","ma","mi","ju","vi"],
+			"paraLlevar": false
+		},{
+			"nombre": "Comedor Universitario Área Salud",
+			"horaInicio": "19:30",
+			"dias": ["lu","ma","mi","ju","vi"],
+			"paraLlevar": true
+		}
+	],
+	"sleepTime": 900000,
+	"concurrent": false,
+	"maxRandomTime": 60000 
+}
