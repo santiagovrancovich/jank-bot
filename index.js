@@ -35,11 +35,11 @@ async function login(cookie){
     "method": "POST"
   });
 
-  let response = await res.status;
+  let response = res.status;
   console.log("Cookie Validation status:", response);
 }
 
-async function getReservas(cookie, comedor){
+async function getReservas(cookies, comedor){
   const response = await fetch("https://comedores.unr.edu.ar/comedor-reserva/buscar-turnos-reservas", {
     "headers": {
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -50,8 +50,30 @@ async function getReservas(cookie, comedor){
     "body": `json=${encodeURIComponent(JSON.stringify({ servicio: comedor, fecha: `${moment().format("YYYY-MM-DD")}+00:00:00` })).replaceAll("%2B", "+")}`,
     "method": "POST"
   });
+  
   console.log(`getReservas '${comedor.comedor.nombre.replaceAll("+"," ")} ${comedor.horaInicio}-${comedor.horaFin}' status:`, response.status, "Para llevar:", comedor.paraLlevar);
   const res = await response.json();
+
+  // Revisa si la semana no se pasa de mes
+  // Nota: esto solo se lanza si al momento de correr el bot falta menos de una semana para el cambio de mes
+  if(moment().format("YYYY-MM") < moment().add(1, "w").format("YYYY-MM")){
+    const responseNextMonth = await fetch("https://comedores.unr.edu.ar/comedor-reserva/buscar-turnos-reservas", {
+    "headers": {
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "cookie": cookies,
+    },
+    // Nota: Jquery serializa mal los datos del body en URIencoding y lo usan para hacer esta request en el front, 
+    // por lo que el servidor espera un "+" donde por especificacion seria un "%2B", esto lo arregla el replaceAll
+    "body": `json=${encodeURIComponent(JSON.stringify({ servicio: comedor, fecha: `${moment().add(1, "M").format("YYYY-MM-DD")}+00:00:00` })).replaceAll("%2B", "+")}`,
+    "method": "POST"
+    });
+  
+    const resNextMonth = await responseNextMonth.json();
+    const values = await Promise.all([res, resNextMonth]);
+    // Esto esta asi de asqueroso porque el concat no anda adentro de objetos
+    return {turnos: values[0].turnos.concat(values[1].turnos)};
+  }
+  
   return res;
 }
 
@@ -62,11 +84,11 @@ async function getComedores(cookies, params){
     "method": "GET"
   });
 
-  if(await response.status != 200){
-    console.log("Incapaz de obtener comedores Status:", await response.status);
+  if(response.status != 200){
+    console.log("Incapaz de obtener comedores Status:", response.status);
     return;
   } else{
-    console.log("Comedores Status:", await response.status);
+    console.log("Comedores Status:", response.status);
   }
   
   const dom = new jsdom.JSDOM( await response.text() );
@@ -114,7 +136,7 @@ async function hacerPedidos(pedidos, cookies, dias){
         "method": "POST"
       });
 
-      console.log("\x1b[32m[REQUEST]\x1b[0m ID:", element.id, element.fecha.fecha, "Status:", await response.status, element.servicio.comedor.nombre, element.servicio.horaInicio.horaCorta, "-", element.servicio.horaFin.horaCorta, "ParaLlevar:", element.servicio.paraLlevar, "Date:", Date());
+      console.log("\x1b[32m[REQUEST]\x1b[0m ID:", element.id, element.fecha.fecha, "Status:", response.status, element.servicio.comedor.nombre, element.servicio.horaInicio.horaCorta, "-", element.servicio.horaFin.horaCorta, "ParaLlevar:", element.servicio.paraLlevar, "Date:", Date());
       await sleep(10000);
     }
   };
@@ -132,7 +154,7 @@ for(const comedor of comedoresArray){
 
   if(conf.concurrent){
     const request = setInterval(async () => {
-      if(!(reserva.turnos.some(turno => turno.reserva == null))){
+      if(!(reserva.turnos.some(turno => turno.reserva == null && turno.fecha.fechaMysql >= moment().format("YYYY-MM-DD") ))){
         console.log(`Reservas no disponibles '${comedor.body.comedor.nombre.replaceAll("+"," ")} ${comedor.body.horaInicio}-${comedor.body.horaFin}' Para llevar: ${comedor.body.paraLlevar}`, Date());
         reserva = await getReservas(cookies, comedor.body);
       } else{
@@ -141,12 +163,12 @@ for(const comedor of comedoresArray){
       }
     }, conf.sleepTime + getRandom(conf.maxRandomTime));  
   } else {
-    while(!(reserva.turnos.some(turno => turno.reserva == null))){
-        console.log(`Reservas no disponibles '${comedor.body.comedor.nombre.replaceAll("+"," ")} ${comedor.body.horaInicio}-${comedor.body.horaFin}' Para llevar: ${comedor.body.paraLlevar}`, Date());
+    while(!(reserva.turnos.some(turno => turno.reserva == null && turno.fecha.fechaMysql >= moment().format("YYYY-MM-DD") ))){
+      console.log(`Reservas no disponibles '${comedor.body.comedor.nombre.replaceAll("+"," ")} ${comedor.body.horaInicio}-${comedor.body.horaFin}' Para llevar: ${comedor.body.paraLlevar}`, Date());
       await sleep(conf.sleepTime + getRandom(conf.maxRandomTime));
       reserva = await getReservas(cookies, comedor.body);
     }
 
     await hacerPedidos(reserva, cookies, comedor.dias);  
   }
-}
+} 
