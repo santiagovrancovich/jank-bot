@@ -1,6 +1,7 @@
 import fs from "fs"
 import jsdom from "jsdom"
 import moment from 'moment'
+import userAgent from "random-useragent"
 
 const rawconf = fs.readFileSync('config.json');
 const conf = JSON.parse(rawconf);
@@ -131,6 +132,7 @@ async function hacerPedidos(pedidos, cookies, dias){
         "headers": {
           "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
           "cookie": cookies,
+          "userAgent": userAgent.getRandom()
         },
         "body": `turno=${element.id}`,
         "method": "POST"
