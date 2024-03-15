@@ -17,5 +17,7 @@
 	],
 	"sleepTime": 900000,
 	"concurrent": false,
-	"maxRandomTime": 60000
+	"maxRandomTime": 60000,
+	"token": "",
+	"channel": 0 
 }

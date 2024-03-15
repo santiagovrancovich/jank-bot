@@ -2,9 +2,11 @@ import fs from "fs"
 import jsdom from "jsdom"
 import moment from 'moment'
 import userAgent from "random-useragent"
+import TelegramBot from 'node-telegram-bot-api';
 
 const rawconf = fs.readFileSync('config.json');
 const conf = JSON.parse(rawconf);
+const bot = new TelegramBot(conf.token);
 
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -161,6 +163,11 @@ for(const comedor of comedoresArray){
         reserva = await getReservas(cookies, comedor.body);
       } else{
         await hacerPedidos(reserva, cookies, comedor.dias);
+        
+        if(comedor.body.comedor.nombre === "Comedor+Universitario+FCEIA"){
+          bot.sendMessage(param.channel, "Abrio el comedor culiau");    
+        }
+        
         clearInterval(request);
       }
     }, conf.sleepTime + getRandom(conf.maxRandomTime));  
@@ -171,6 +178,9 @@ for(const comedor of comedoresArray){
       reserva = await getReservas(cookies, comedor.body);
     }
 
-    await hacerPedidos(reserva, cookies, comedor.dias);  
+    await hacerPedidos(reserva, cookies, comedor.dias);
+    if(comedor.body.comedor.nombre === "Comedor+Universitario+FCEIA"){
+      bot.sendMessage(param.channel, "Abrio el comedor culiau");    
+    } 
   }
 } 
