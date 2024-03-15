@@ -102,7 +102,7 @@ async function getComedores(cookies, params){
     for (const comedor of json){
       if(comedor.nombre == param.nombre){
         for (const servicio of comedor.servicios){
-          if (servicio.horaInicio.horaCorta == param.horaInicio && servicio.paraLlevar == param.paraLlevar){
+          if (servicio.horaInicio.horaCorta == param.horaInicio && servicio.paraLlevar == param.paraLlevar && servicio.tipo.nombre == param.comida){
             //Swap horas
             servicio.horaInicio = servicio.horaInicio.horaCorta;
             servicio.horaFin = servicio.horaFin.horaCorta;
@@ -156,7 +156,7 @@ for(const comedor of comedoresArray){
 
   if(conf.concurrent){
     const request = setInterval(async () => {
-      if(!(reserva.turnos.some(turno => turno.reserva == null && turno.fecha.fechaMysql >= moment().format("YYYY-MM-DD") ))){
+      if(!(reserva.turnos.some(turno => turno.reserva == null && `${turno.fecha.fechaMysql} ${turno.servicio.horaFin.hora}` >= moment().format("YYYY-MM-DD HH:mm:ss")))){
         console.log(`Reservas no disponibles '${comedor.body.comedor.nombre.replaceAll("+"," ")} ${comedor.body.horaInicio}-${comedor.body.horaFin}' Para llevar: ${comedor.body.paraLlevar}`, Date());
         reserva = await getReservas(cookies, comedor.body);
       } else{
@@ -165,7 +165,7 @@ for(const comedor of comedoresArray){
       }
     }, conf.sleepTime + getRandom(conf.maxRandomTime));  
   } else {
-    while(!(reserva.turnos.some(turno => turno.reserva == null && turno.fecha.fechaMysql >= moment().format("YYYY-MM-DD") ))){
+    while(!(reserva.turnos.some(turno => turno.reserva == null && `${turno.fecha.fechaMysql} ${turno.servicio.horaFin.hora}` >= moment().format("YYYY-MM-DD HH:mm:ss") ))){
       console.log(`Reservas no disponibles '${comedor.body.comedor.nombre.replaceAll("+"," ")} ${comedor.body.horaInicio}-${comedor.body.horaFin}' Para llevar: ${comedor.body.paraLlevar}`, Date());
       await sleep(conf.sleepTime + getRandom(conf.maxRandomTime));
       reserva = await getReservas(cookies, comedor.body);
