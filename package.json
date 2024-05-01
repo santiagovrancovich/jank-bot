@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "jsdom": "^22.1.0",
     "moment": "^2.29.4",
     "node-telegram-bot-api": "^0.64.0",
     "random-useragent": "^0.5.0"

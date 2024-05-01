@@ -35,7 +35,8 @@ async function login(cookie){
       "Cookie": cookie,
     },
     "body": formdata,
-    "method": "POST"
+    "method": "POST",
+    "userAgent": userAgent.getRandom()
   });
 
   let response = res.status;
@@ -47,6 +48,7 @@ async function getReservas(cookies, comedor){
     "headers": {
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         "cookie": cookies,
+        "userAgent": userAgent.getRandom()
     },
     // Nota: Jquery serializa mal los datos del body en URIencoding y lo usan para hacer esta request en el front, 
     // por lo que el servidor espera un "+" donde por especificacion seria un "%2B", esto lo arregla el replaceAll
@@ -64,6 +66,7 @@ async function getReservas(cookies, comedor){
     "headers": {
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         "cookie": cookies,
+        "userAgent": userAgent.getRandom()
     },
     // Nota: Jquery serializa mal los datos del body en URIencoding y lo usan para hacer esta request en el front, 
     // por lo que el servidor espera un "+" donde por especificacion seria un "%2B", esto lo arregla el replaceAll
@@ -84,7 +87,8 @@ async function getComedores(cookies, params){
   const response = await fetch("https://comedores.unr.edu.ar/comedor-reserva/reservar", {
     "headers": { "cookie": cookies },
     "body": null,
-    "method": "GET"
+    "method": "GET",
+    "userAgent": userAgent.getRandom()
   });
 
   if(response.status != 200){
@@ -94,9 +98,9 @@ async function getComedores(cookies, params){
     console.log("Comedores Status:", response.status);
   }
   
-  const dom = new jsdom.JSDOM( await response.text() );
-  const scriptText = dom.window.document.querySelector("body > div > div.main-panel > div > div > script:last-child").textContent;
-  const json = JSON.parse(scriptText.substring(21, scriptText.length - 2)).comedores;
+  const text = await response.text();
+  const scriptText = text.match(/var jsonReservar[\s\S]*?\};/g);
+  const json = JSON.parse(scriptText[0].substring(19, scriptText[0].length - 1)).comedores;
   
   let comedoresArray = [];
 
@@ -151,7 +155,13 @@ const cookies = await getCookies();
 console.log(cookies);
 await login(cookies);
 
-const comedoresArray = await getComedores(cookies, conf.comedores);
+let comedoresArray = await getComedores(cookies, conf.comedores);
+
+while(comedoresArray.length != conf.comedores.length){
+  console.log("Comedores no disponibles, reintentando mas tarde", Date());
+  await sleep(conf.sleepTime + getRandom(conf.maxRandomTime));
+  comedoresArray = await getComedores(cookies, conf.comedores);
+}
 
 for(const comedor of comedoresArray){
   let reserva = await getReservas(cookies, comedor.body);
@@ -165,7 +175,7 @@ for(const comedor of comedoresArray){
         await hacerPedidos(reserva, cookies, comedor.dias);
         
         if(comedor.body.comedor.nombre === "Comedor+Universitario+FCEIA"){
-          bot.sendMessage(param.channel, "Abrio el comedor culiau");    
+          bot.sendMessage(conf.channel, "Abrio el comedor culiau");    
         }
         
         clearInterval(request);
@@ -180,7 +190,7 @@ for(const comedor of comedoresArray){
 
     await hacerPedidos(reserva, cookies, comedor.dias);
     if(comedor.body.comedor.nombre === "Comedor+Universitario+FCEIA"){
-      bot.sendMessage(param.channel, "Abrio el comedor culiau");    
-    } 
+      bot.sendMessage(conf.channel, "Abrio el comedor culiau");    
+    }
   }
 } 
